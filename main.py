@@ -9,9 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Bot-Initialisierung mit Intents
-intents = discord.Intents.default()
-intents.messages = True
-intents.message_content = True
+intents = discord.Intents.all()
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 
@@ -134,7 +132,100 @@ async def remind_private(ctx, lang: str = 'en'):
     except Exception as e:
         await handle_error(ctx, str(e))
 
+@bot.command(name="list-registered-cr")
+async def list_registered_cr(ctx, lang: str = 'en'):
+    """Schickt private Erinnerungen an Nutzer, die ihre Decks noch nicht gespielt haben."""
+    try:
+        user_list = user_service.load_data()
+        cr_members = cr.get_clan_members()
 
+        max_chars_per_message = 2000
+        message = ""
+
+        for member in cr_members:
+            if member["tag"] not in [user["cr_id"] for user in user_list]:
+                message += f"{member["name"]} has´nt registered jet\n"
+        await ctx.send(message)
+
+    except Exception as e:
+        await handle_error(ctx, str(e))
+
+
+@bot.command(name="list-registered-dc")
+async def list_registered_dc(ctx, lang: str = 'en'):
+    """Schickt private Erinnerungen an Nutzer, die ihre Decks noch nicht gespielt haben."""
+    try:
+        user_list = user_service.load_data()
+        dc_members = ctx.guild.members
+
+        max_chars_per_message = 2000
+        message = ""
+        for member in dc_members:
+            if not member.bot:
+                if member.id not in [user["dc_id"] for user in user_list]:
+                    message += f"{member.mention} has´nt registered jet\n"
+
+        await ctx.send(message)
+
+
+    except Exception as e:
+        await handle_error(ctx, str(e))
+
+@bot.command(name="remind-unregistered-private")
+async def remind_unregistered_private(ctx, lang: str = 'en'):
+    """Schickt private Erinnerungen an Nutzer, die ihre Decks noch nicht gespielt haben."""
+    try:
+        user_list = user_service.load_data()
+        dc_members = ctx.guild.members
+
+        for member in dc_members:
+            if not member.bot:
+                if member.id not in [user["dc_id"] for user in user_list]:
+                    await member.send(f"Please register yourself ")
+
+
+    except Exception as e:
+        await handle_error(ctx, str(e))
+
+
+@bot.command(name="update-roles")
+async def update_roles(ctx, lang: str = 'en'):
+    try:
+        user_list = user_service.load_data()  # Lade die Benutzerliste
+        cr_members = cr.get_clan_members()  # Lade die Clan-Mitglieder
+
+        for cr_member in cr_members:
+            # Überprüfe, ob das Clan-Mitglied auch in der user_list vorhanden ist
+            user_data = next((user for user in user_list if user["cr_id"] == cr_member["tag"]), None)
+            if user_data:
+                # Hole die Discord-ID (dc_id) des Benutzers aus der user_list
+                dc_id = user_data["dc_id"]
+                cr_member_role = cr_member["role"]  # Hole die Rolle des Clan-Mitglieds
+
+                # Hole das Member-Objekt aus dem Server anhand der Discord-ID
+                member = ctx.guild.get_member(dc_id)
+                if member:
+                    # Bestimme den Rollennamen basierend auf der Rolle des Clan-Mitglieds
+                    role_name = ""
+                    if cr_member_role == "elder":
+                        role_name = "Ältester"
+                    elif cr_member_role == "admin":
+                        role_name = "Vize"
+                    elif cr_member_role == "coleader":
+                        role_name = "Vize-Anführer"
+                    elif cr_member_role == "leader":
+                        role_name = "Anführer"
+
+                    # Hole die Rolle aus dem Server
+                    role = discord.utils.get(ctx.guild.roles, name=role_name)
+
+                    if role:
+                        # Füge die Rolle hinzu, wenn sie noch nicht zugewiesen ist
+                        if role not in member.roles:
+                            await member.add_roles(role)
+                            await ctx.send(f"Rolle '{role_name}' wurde {member.name} zugewiesen.")
+    except Exception as e:
+        await ctx.send(f"Es gab einen Fehler: {e}")
 
 if __name__ == "__main__":
     token = os.environ.get('DC_TOKEN')

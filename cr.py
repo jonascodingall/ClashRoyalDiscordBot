@@ -63,3 +63,16 @@ def get_missing_decks_player():
         raise RuntimeError("No participants found in the API response.")
 
     return [player for player in participants if player.get("decksUsedToday", 0) < 4]
+
+def get_clan_members():
+    url = f"{BASE_URL}/clans/{CLAN_ID}/members"
+    try:
+        response = requests.get(url, headers=get_headers())
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        raise RuntimeError(f"API request failed: {e}")
+
+    data = response.json()
+    members = data.get("items", [])
+
+    return members
