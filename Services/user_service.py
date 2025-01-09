@@ -1,7 +1,7 @@
 import json
 import os
 
-FILE = "./user_list.json"
+FILE = "../user_list.json"
 
 
 def load_data():
