@@ -16,6 +16,8 @@ def get_currentriverrace():
 def get_player(player_tag):
     return cr_api.get_player(format_tag(player_tag))
 
+def get_upcomingchests(player_tag):
+    return cr_api.get_player_upcomingchests(format_tag(player_tag))
 
 # special functions
 def missing_decks_currentriverrace():

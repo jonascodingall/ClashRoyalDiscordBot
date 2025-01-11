@@ -1,6 +1,7 @@
 import os
 import discord
 from discord.ext import commands
+from discord.ext.commands import Context
 from Services import user_service
 from Services import cr_service
 from dotenv import load_dotenv
@@ -22,46 +23,39 @@ async def on_ready():
     """Wird ausgelöst, wenn der Bot erfolgreich gestartet wurde."""
     print(f"Bot logged in as {bot.user}")
 
+@bot.event
+async def on_member_join(member):
+    await member.send("""Willkommen auf unserem Discord Server. 
+Bitte registriere dich zu allererst im Kanal #Clankrieg mit deinem Spielertag: !register #playertag
+Vielen Dank im Voraus!
+Wir sind ein Clankriegs-Clan, folglich legen wir großen Wert auf Zuverlässigkeit bezüglich der Clankriegskämpfe.
+Falls du einmal nicht kämpfen können solltest, melde dich bitte frühzeitig hier auf dem Discord ab.
+Auf viele erfolgreiche Kämpfe und eine gute Gemeinschaft
+CR Elite 👑""")
+
 # commands
 @bot.command(name='register')
-async def register(ctx, player_tag: str, lang: str = 'en'):
+async def register(ctx: Context, player_tag: str, user: discord.Member = None, lang: str = 'en'):
     try:
-        user_id = ctx.author.id
+        dc_target_user = user or ctx.author
+
         cr_user = cr_service.get_player(player_tag)
 
         if not cr_user:
             await ctx.send("Invalid player tag or player not found.")
-            return
-
-        user_service.create({"dc_id": user_id, "cr_id": cr_user.tag})
-        await ctx.send(f"{ctx.author.mention} registered as {cr_user.name}")
+        else:
+            user_service.create({"dc_id": dc_target_user.id, "cr_id": cr_user.tag})
+            await ctx.send(f"{dc_target_user.mention} registered as {cr_user.name}")
 
     except Exception as e:
         await handle_error(ctx, str(e))
 
 @bot.command(name="unregister")
-async def unregister(ctx, lang: str = 'en'):
+async def unregister(ctx: Context, user: discord.Member = None , lang: str = 'en'):
     try:
-        user_service.delete(ctx.author.id)
-        await ctx.send(f"{ctx.author.mention} unregistered")
-    except Exception as e:
-        await handle_error(ctx, str(e))
-
-@bot.command(name="remaining-decks")
-async def remaining_decks(ctx, lang: str = 'en'):
-    try:
-        result_list = cr_service.get_currentriverrace()
-
-        if not result_list:
-            await ctx.send("No data available.")
-            raise Exception()
-
-        message = ""
-
-        for participants in result_list.clan.participants:
-            message += f"**{participants.name}** : {4 - participants.decksUsedToday}\n"
-
-        await ctx.send(message)
+        dc_target_user = user or ctx.author
+        user_service.delete(dc_target_user.id)
+        await ctx.send(f"{dc_target_user.id} unregistered")
 
     except Exception as e:
         await handle_error(ctx, str(e))
@@ -234,6 +228,26 @@ async def update_roles(ctx, lang: str = 'en'):
                             await ctx.send(f"Rolle '{role_name}' wurde {member.name} zugewiesen.")
     except Exception as e:
         await ctx.send(f"Es gab einen Fehler: {e}")
+
+@bot.command(name="upcomingchests")
+async def upcomingchests(ctx: Context, user: discord.Member = None, count = None, lang: str = 'en'):
+    try:
+        dc_target_user = user or ctx.author
+        cr_member = user_service.read_dc(dc_target_user.id)
+        upcoming_chests = cr_service.get_upcomingchests(cr_member["cr_id"])
+        message = f"This are your upcoming chests {dc_target_user.mention}:\n\n"
+        if count:
+            for i in range(count):
+                chest = upcoming_chests.chests[i]
+                message += f"{chest.name} in {chest.index} Wins\n"
+        else:
+            for chest in upcoming_chests.chests:
+                message += f"{chest.name} in {chest.index + 1} Wins\n"
+
+        await ctx.send(message)
+
+    except Exception as e:
+        await handle_error(ctx, str(e))
 
 if __name__ == "__main__":
     token = os.environ.get('DC_TOKEN')

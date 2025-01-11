@@ -1,6 +1,7 @@
 import requests
 import os
 
+from ClashRoyal.models.ChestList import ChestList
 from ClashRoyal.models.ClanMemberList import ClanMemberList
 from ClashRoyal.models.CurrentRiverRace import CurrentRiverRace
 from ClashRoyal.models.Player import Player
@@ -45,3 +46,15 @@ def get_player(player_tag):
     url = f"{BASE_URL}/players/{player_tag}"
     player_data = make_request(url)
     return Player.from_json(player_data)
+
+def get_player_upcomingchests(player_tag):
+    url = f"{BASE_URL}/players/{player_tag}/upcomingchests"
+    chest_data = make_request(url)
+    return ChestList.from_json(chest_data)
+
+if __name__ == "__main__":
+    from dotenv import load_dotenv
+    load_dotenv()
+    upcomingchests = get_player_upcomingchests("%2322P9C0G9V")
+    for chest in upcomingchests.chests:
+        print(chest.name)
