@@ -3,7 +3,7 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import Context
 from Services import user_service
-from Services import cr_service
+from ClashRoyal.services import cr_service
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -33,7 +33,43 @@ Falls du einmal nicht kämpfen können solltest, melde dich bitte frühzeitig hi
 Auf viele erfolgreiche Kämpfe und eine gute Gemeinschaft
 CR Elite 👑""")
 
+@bot.event
+async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
+    msg_id = 1327451362606321705
+    guild = bot.get_guild(payload.guild_id)
+    member = guild.get_member(payload.user_id)
+    role = None
+    if payload.message_id == msg_id:
+        if str(payload.emoji) == "⚔️":
+            role = discord.utils.get(member.guild.roles, name="CLANWAR")
+        elif str(payload.emoji) == "🪜":
+            role = discord.utils.get(member.guild.roles, name="LADDER")
+    if role:
+        await member.add_roles(role)
+
+@bot.event
+async def on_raw_reaction_remove(payload: discord.RawReactionActionEvent):
+    msg_id = 1327451362606321705
+    guild = bot.get_guild(payload.guild_id)
+    member = guild.get_member(payload.user_id)
+    role = None
+    if payload.message_id == msg_id:
+        if str(payload.emoji) == "⚔️":
+            role = discord.utils.get(member.guild.roles, name="CLANWAR")
+        elif str(payload.emoji) == "🪜":
+            role = discord.utils.get(member.guild.roles, name="LADDER")
+    if role:
+        await member.remove_roles(role)
+
+
 # commands
+@bot.command(name="create-role-message")
+async def create_role_message(ctx: Context):
+    message = await ctx.send("- ⚔️ **(Clanwar)**\n- 🪜 **(Ladder)**")
+    await message.add_reaction("⚔️")
+    await message.add_reaction("🪜")
+    print(message.id)
+
 @bot.command(name='register')
 async def register(ctx: Context, player_tag: str, user: discord.Member = None, lang: str = 'en'):
     try:
@@ -60,67 +96,41 @@ async def unregister(ctx: Context, user: discord.Member = None , lang: str = 'en
     except Exception as e:
         await handle_error(ctx, str(e))
 
-@bot.command("remind-cv")
-async def remind_cv(ctx, lang: str = 'en'):
+@bot.command("remind-cw")
+async def remind_cw(ctx, lang: str = 'en'):
     """Erinnert Nutzer, die ihre Decks noch nicht gespielt haben."""
     try:
         missing_decks = cr_service.missing_decks_currentriverrace()
-        if not missing_decks:
-            await ctx.send("All players have completed their CV.")
-            return
 
-        max_chars_per_message = 2000
         message = ""
-
+        registered_missing = False
+        non_registed_missing = 0
         for participant in missing_decks:
             user_link = user_service.read_cr(participant.tag)
             if user_link and "dc_id" in user_link:
                 user = await bot.fetch_user(user_link["dc_id"])
                 if user:
-                    message += f"{user.mention}, please do your CV!\n"
-
-        # Verbleibende Nachricht senden
-        if message:
-            await ctx.send(message)
-
-    except Exception as e:
-        await handle_error(ctx, str(e))
-
-@bot.command("remind-cv-all")
-async def remind_cv_all(ctx, lang: str = 'en'):
-    """Erinnert Nutzer, die ihre Decks noch nicht gespielt haben."""
-    try:
-        missing_decks = cr_service.missing_decks_currentriverrace()
-        if not missing_decks:
-            await ctx.send("All players have completed their CV.")
-            return
-
-        max_chars_per_message = 2000
-        message = ""
-
-        for participant in missing_decks:
-            user_link = user_service.read_cr(participant.tag)
-            if user_link and "dc_id" in user_link:
-                user = await bot.fetch_user(user_link["dc_id"])
-                if user:
-                    message += f"{user.mention}, please do your CV!\n"
+                    registered_missing = True
+                    message += f"{user.mention}, please do your CW!\n"
             else:
-                message += f"{participant.name}, please do your CV!\n"
+                non_registed_missing += 1
 
-        # Verbleibende Nachricht senden
+        if not registered_missing:
+            await ctx.send(f"All registed Players did ther CW\n{non_registed_missing} not registered People didnt do their CW")
+
         if message:
             await ctx.send(message)
 
     except Exception as e:
         await handle_error(ctx, str(e))
 
-@bot.command(name="remind-cv-private")
-async def remind_cv_private(ctx, lang: str = 'en'):
+@bot.command(name="remind-cw-private")
+async def remind_cw_private(ctx, lang: str = 'en'):
     """Schickt private Erinnerungen an Nutzer, die ihre Decks noch nicht gespielt haben."""
     try:
         missing_decks = cr_service.missing_decks_currentriverrace()
         if not missing_decks:
-            await ctx.send("All players have completed their CV.")
+            await ctx.send("All players have completed their CW.")
             return
 
 
@@ -129,7 +139,7 @@ async def remind_cv_private(ctx, lang: str = 'en'):
             if user_link and "dc_id" in user_link:
                 user = await bot.fetch_user(user_link["dc_id"])
                 if user:
-                    await user.send("Please complete your CV!")
+                    await user.send("Please complete your CW!")
 
         await ctx.send("Sended a private reminder!")
 

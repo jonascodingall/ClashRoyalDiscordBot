@@ -1,4 +1,4 @@
-from ClashRoyal import cr_api
+from ClashRoyal.api import cr_api
 
 CV_CLAN_TAG = "#YVUQV2YC"
 
