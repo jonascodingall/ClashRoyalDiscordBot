@@ -1,5 +1,6 @@
 import os
 import discord
+from discord import player
 from discord.ext import commands
 from discord.ext.commands import Context
 from Services import user_service
@@ -62,6 +63,8 @@ async def on_raw_reaction_remove(payload: discord.RawReactionActionEvent):
 
 
 # commands
+
+# clan-war
 @bot.command(name='register')
 async def register(ctx: Context, player_tag: str, user: discord.Member = None):
     try:
@@ -89,8 +92,39 @@ async def unregister(ctx: Context, user: discord.Member = None):
         await handle_error(ctx, str(e))
 
 @bot.command(name="remind")
-def remind(ctx: Context, options: str):
-    pass
+async def remind(ctx: Context, *, options: str = ""):
+    try:
+        missing_decks = clashroyal.missing_decks_currentriverrace()
+        message = ""
+        for player in missing_decks:
+            user_link = user_service.read_cr(player.tag)
+            if user_link:
+                user = await bot.fetch_user(user_link["dc_id"])
+                message += f"{user.mention} mache bitte deine Kriegskämpfe!!!\n"
+                if "-private" in options:
+                    await user.send("Mache bitte deine Kriegskämpfe!!!")
+        await ctx.send(message)
+
+    except Exception as e:
+        await handle_error(ctx, str(e))
+
+
+# other
+@bot.command(name="upcomingchests")
+async def upcomingchests(ctx: Context, user: discord.Member = None):
+    try:
+        dc_target_user = user or ctx.author
+        cr_member = user_service.read_dc(dc_target_user.id)
+        upcoming_chests = clashroyal.get_upcomingchests(cr_member["cr_id"])
+        message = f"This are your upcoming chests {dc_target_user.mention}:\n\n"
+
+        for chest in upcoming_chests.chests:
+            message += f"{chest.name} in {chest.index + 1} Wins\n"
+
+        await ctx.send(message)
+
+    except Exception as e:
+        await handle_error(ctx, str(e))
 
 if __name__ == "__main__":
     token = os.environ.get('DC_TOKEN')
