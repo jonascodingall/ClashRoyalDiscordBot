@@ -1,6 +1,5 @@
 import os
 import discord
-from discord import player
 from discord.ext import commands
 from discord.ext.commands import Context
 from Services import user_service
@@ -103,6 +102,8 @@ async def remind(ctx: Context, *, options: str = ""):
                 message += f"{user.mention} mache bitte deine Kriegskämpfe!!!\n"
                 if "-private" in options:
                     await user.send("Mache bitte deine Kriegskämpfe!!!")
+        if not message:
+            message = "Alle registrierten Nutzer haben ihre Angriffe gemacht"
         await ctx.send(message)
 
     except Exception as e:
@@ -116,10 +117,13 @@ async def upcomingchests(ctx: Context, user: discord.Member = None):
         dc_target_user = user or ctx.author
         cr_member = user_service.read_dc(dc_target_user.id)
         upcoming_chests = clashroyal.get_upcomingchests(cr_member["cr_id"])
-        message = f"This are your upcoming chests {dc_target_user.mention}:\n\n"
+        message = f"Hier sind deine nächsten Truhen {dc_target_user.mention}:\n\n"
 
         for chest in upcoming_chests.chests:
-            message += f"{chest.name} in {chest.index + 1} Wins\n"
+            if chest.index == 0:
+                message += f"{chest.name} in {chest.index + 1} Sieg\n"
+            else:
+                message += f"{chest.name} in {chest.index + 1} Siegen\n"
 
         await ctx.send(message)
 
